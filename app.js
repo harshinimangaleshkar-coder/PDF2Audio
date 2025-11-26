@@ -1,104 +1,116 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Initialize Supabase
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const authSection = document.getElementById("auth-section");
-const dashboard = document.getElementById("dashboard");
-const loginBtn = document.getElementById("google-login");
-const logoutBtn = document.getElementById("logout-btn");
-const userEmailSpan = document.getElementById("user-email");
-const convertBtn = document.getElementById("convert-btn");
-const uploadInput = document.getElementById("pdf-upload");
-const statusText = document.getElementById("status");
-const booksList = document.getElementById("books-list");
-
-loginBtn.addEventListener("click", async () => {
-    await supabase.auth.signInWithOAuth({
-        provider: "google"
-    });
-});
-
-logoutBtn.addEventListener("click", async () => {
-    await supabase.auth.signOut();
-    showAuth();
-});
-
-supabase.auth.onAuthStateChange((event, session) => {
-    if (session?.user) {
-        showDashboard(session.user);
-    } else {
-        showAuth();
-    }
-});
-
-function showAuth() {
-    authSection.classList.remove("hidden");
-    dashboard.classList.add("hidden");
+// ---------- GOOGLE LOGIN ----------
+export async function signInWithGoogle() {
+  console.log("Google login clicked");
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: "https://pdf-2-audio-five.vercel.app/auth/callback",
+    },
+  });
+  if (error) alert("Login failed: " + error.message);
 }
 
-function showDashboard(user) {
-    authSection.classList.add("hidden");
-    dashboard.classList.remove("hidden");
-    userEmailSpan.textContent = user.email;
-    loadBooks(user);
+// ---------- LOGOUT ----------
+export async function logoutUser() {
+  await supabase.auth.signOut();
+  window.location.reload();
 }
 
+// ---------- AUTH STATE ----------
+supabase.auth.onAuthStateChange(async (event, session) => {
+  if (session?.user) {
+    document.getElementById("auth-section").classList.add("hidden");
+    document.getElementById("dashboard").classList.remove("hidden");
+
+    document.getElementById("user-email").innerText = session.user.email;
+    loadBooks(session.user);
+  } else {
+    document.getElementById("auth-section").classList.remove("hidden");
+    document.getElementById("dashboard").classList.add("hidden");
+  }
+});
+
+// ---------- LOAD AUDIOBOOKS ----------
 async function loadBooks(user) {
-    booksList.innerHTML = "Loading…";
+  const booksList = document.getElementById("books-list");
+  const status = document.getElementById("status");
 
-    const { data } = await supabase
-        .from("books")
-        .select("*")
-        .eq("user_id", user.id);
+  booksList.innerHTML = "Loading…";
 
-    booksList.innerHTML = "";
+  const { data } = await supabase
+    .from("books")
+    .select("*")
+    .eq("user_id", user.id);
 
-    data.forEach(book => {
-        const div = document.createElement("div");
-        div.className = "book-item";
-        div.innerHTML = `
-            <span>${book.title}</span>
-            <a href="${book.audio_url}" target="_blank">▶️ Listen</a>
-        `;
-        booksList.appendChild(div);
-    });
+  booksList.innerHTML = "";
 
-    if (data.length >= 3) {
-        convertBtn.disabled = true;
-        statusText.textContent = "You reached your 3-book limit.";
-    } else {
-        convertBtn.disabled = false;
-        statusText.textContent = "";
-    }
+  data.forEach((b) => {
+    const div = document.createElement("div");
+    div.className = "book-item";
+    div.innerHTML = `
+      <span>${b.title}</span>
+      <a href="${b.audio_url}" target="_blank">▶️ Listen</a>
+    `;
+    booksList.appendChild(div);
+  });
+
+  if (data.length >= 3) {
+    document.getElementById("convert-btn").disabled = true;
+    status.innerText = "You reached your 3-book limit.";
+  } else {
+    document.getElementById("convert-btn").disabled = false;
+    status.innerText = "";
+  }
 }
 
-convertBtn.addEventListener("click", async () => {
-    const file = uploadInput.files[0];
-    if (!file) return alert("Upload a PDF first!");
+// ---------- PDF → AUDIO ----------
+export async function convertPdfToAudio() {
+  const file = document.getElementById("pdf-upload").files[0];
+  if (!file) return alert("Upload a PDF first!");
 
-    statusText.textContent = "Extracting text…";
+  const status = document.getElementById("status");
+  status.innerText = "Extracting text…";
 
-    const text = await file.text();
-    statusText.textContent = "Generating audio…";
+  const text = await file.text();
 
-    const response = await fetch("/api/generateAudio", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text })
-    });
+  status.innerText = "Generating audio…";
 
-    const { audioUrl, title } = await response.json();
+  const response = await fetch("/api/generateAudio", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text }),
+  });
 
-    statusText.textContent = "Saving…";
+  const { audioUrl, title } = await response.json();
 
-    const user = (await supabase.auth.getUser()).data.user;
+  const user = (await supabase.auth.getUser()).data.user;
 
-    await supabase.from("books").insert({
-        user_id: user.id,
-        title: title,
-        audio_url: audioUrl
-    });
+  status.innerText = "Saving…";
 
-    statusText.textContent = "Done!";
-    loadBooks(user);
+  await supabase.from("books").insert({
+    user_id: user.id,
+    title,
+    audio_url: audioUrl,
+  });
+
+  status.innerText = "Done!";
+  loadBooks(user);
+}
+
+// ---------- ATTACH BUTTONS ----------
+document.addEventListener("DOMContentLoaded", () => {
+  const googleBtn = document.getElementById("googleBtn");
+  if (googleBtn) googleBtn.onclick = signInWithGoogle;
+
+  const logoutBtn = document.getElementById("logout-btn");
+  if (logoutBtn) logoutBtn.onclick = logoutUser;
+
+  const convertBtn = document.getElementById("convert-btn");
+  if (convertBtn) convertBtn.onclick = convertPdfToAudio;
 });
