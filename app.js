@@ -6,14 +6,17 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ---------- GOOGLE LOGIN ----------
 export async function signInWithGoogle() {
-  console.log("Google login clicked");
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: "https://pdf-2-audio-five.vercel.app/auth/callback",
+      redirectTo: "https://pdf-2-audio-five.vercel.app",
     },
   });
-  if (error) alert("Login failed: " + error.message);
+
+  if (error) {
+    console.error("Google Login Error:", error);
+    alert("Google Login Failed: " + error.message);
+  }
 }
 
 // ---------- LOGOUT ----------
