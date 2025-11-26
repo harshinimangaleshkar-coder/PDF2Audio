@@ -1,40 +1,36 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDF to Audiobook</title>
-    <link rel="stylesheet" href="styles.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js" defer></script>
-    <script type="module" src="app.js" defer></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDF to Audiobook</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 
 <body>
-    <div id="app">
+  <div id="auth-section" class="container">
+    <h1>PDF to Audiobook</h1>
+    <p>Listen to your PDFs easily.</p>
 
-        <div id="auth-section">
-            <h1>PDF to Audiobook</h1>
-            <p>Listen to your PDFs. Free and simple.</p>
+    <button id="googleBtn" class="google-button">
+      Sign in with Google
+    </button>
+  </div>
 
-            <button id="google-login">Sign in with Google</button>
-        </div>
+  <div id="dashboard" class="container hidden">
+    <h2>Welcome, <span id="user-email"></span></h2>
 
-        <div id="dashboard" class="hidden">
-            <h2>Welcome, <span id="user-email"></span></h2>
+    <input type="file" id="pdf-upload" accept="application/pdf" />
+    <button id="convert-btn">Convert to Audio</button>
 
-            <div class="upload-box">
-                <input type="file" id="pdf-upload" accept="application/pdf">
-                <button id="convert-btn">Convert to Audio</button>
-            </div>
+    <p id="status"></p>
 
-            <p id="status"></p>
+    <h3>Your audiobooks</h3>
+    <div id="books-list"></div>
 
-            <h3>Your Audiobooks (max 3)</h3>
-            <div id="books-list"></div>
+    <button id="logout-btn">Logout</button>
+  </div>
 
-            <button id="logout-btn">Logout</button>
-        </div>
-
-    </div>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
